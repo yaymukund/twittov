@@ -30,6 +30,12 @@ from optparse import OptionParser
 from twython import Twython
 from util import ingrams
 
+class TwitterAPIException(Exception):
+  def __init__(self, value):
+    self.value = value
+  def __str__(self):
+    return repr(self.value)
+
 # Utility Functions
 # =================
 #
@@ -98,7 +104,7 @@ def markov(sequence, order, distribution=None, heads=None):
 def get_tweets(username, amount):
   """Given a Twitter username, scrape up to $amount entries.
 
-  We do not fetch exactly 200 tweets. The account may not have $amount tweets,
+  We do not fetch exactly $amount tweets. The account may not have $amount tweets,
   or we might skip over a few tweets if they are @replies or retweets.
 
   Keyword arguments:
@@ -125,6 +131,11 @@ def get_tweets(username, amount):
           page=str(page), count='200')
       amount -= 200
       page += 1
+
+    if isinstance(search_results, dict) and search_results['error']:
+      raise TwitterAPIException(str(search_results['error']))
+    elif not search_results:
+      raise TwitterAPIException('User has no tweets.')
 
     for result in search_results:
       tweets.append(result['text']) 
@@ -170,7 +181,7 @@ class TweetList:
     else:
       separator = ' '
 
-    return separator.join(text)
+    return separator.join(text).encode('utf-8')
 
   def _generate_distribution(self, order, split_words):
     """Apply the Markov algorithm repeatedly to self.tweets.
