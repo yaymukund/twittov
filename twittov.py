@@ -153,28 +153,34 @@ class TweetList:
     Keyword arguments:
     order -- The order of the Markov model.
     heads -- A set of heads, or strings to start from.
-    length -- How much text should we generate? In words or characters, depending
-              on the frequency_distribution.
+    length -- How much text, in characters, should we generate?
     split_words -- If true, we apply Markov to letters rather than words.
 
     """
     distribution, heads = self._generate_distribution(order, split_words)
-
     prefix = random.sample(heads, 1)[0] # Pick a random head.
     text = list(prefix)
 
-    while len(text) < length:
+    # Count the letters.
+    current_length = sum([ len(i) for i in text ])
+
+    while current_length < length:
       if prefix in distribution:
         suffix = random.sample(distribution[prefix], 1)[0]
         text.append(suffix)
+        current_length += len(suffix)
+        # Readjust the prefix.
         prefix = tuple(text[-order:])
 
       # If we have reached the end of a chain, start a new one.
       else:
-        prefix = random.sample(heads, 1)[0]
+        # Mark the end of a sentence.
         if split_words:
           text.append(' ')
+
+        prefix = random.sample(heads, 1)[0]
         text.extend(prefix)
+        current_length += sum([ len(i) for i in prefix])
 
     if split_words:
       separator = ''
@@ -210,7 +216,7 @@ if __name__ == '__main__':
     parser = OptionParser(usage='Usage: twittov.py [options] username')
     parser.set_defaults(length=160, split_words=False, cache='.twittov.cache', must_cache=False, order=3, cache_size=200, verbose=False)
 
-    parser.add_option('-l', '--length', type='int', dest='length', metavar='LENGTH', help='Set the *minimum* output length. If SPLIT is true, count characters. Otherwise, count words. LENGTH must be a positive integer. Default is 160.')
+    parser.add_option('-l', '--length', type='int', dest='length', metavar='LENGTH', help='Set the *minimum* output length in characters. LENGTH must be a positive integer. Default is 160.')
     parser.add_option('-c', '--cache-file', dest='cache', type='string', metavar='FILE', help='Sets the cache file. By default, we save to .twittov.cache')
     parser.add_option('-f', '--force-cache-update', action='store_true', dest='mustCache', help='Force download all tweets and update cache, even if username is already in cache.')
     parser.add_option('-s', '--cache-size', type='int', dest='amount', help='How many tweets to scrape. Default is 200.')
